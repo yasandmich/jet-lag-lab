@@ -30,7 +30,7 @@ a { color: inherit; }
 .label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; opacity: .6; }
 .txt { width: 100%; padding: 10px 14px; border-radius: 12px; background: #fff; border: 1px solid var(--tan); font-size: 14px; }
 .txt:focus { outline: 2px solid var(--sage); }
-.dropdown { position: absolute; z-index: 20; margin-top: 8px; width: 100%; background: #fff; border: 1px solid var(--tan); border-radius: 16px; max-height: 240px; overflow: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,.1); }
+.dropdown { position: absolute; z-index: 20; margin-top: 8px; width: 100%; background: #fff; border: 1px solid var(--tan); border-radius: 16px; max-height: 240px; overflow: auto; box-shadow: 0 20px 40px rgba(0,0,0,.12); }
 .opt { padding: 10px 14px; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--cream); }
 .opt:last-child { border-bottom: 0; }
 .opt:hover { background: #FFFEF7; }
@@ -39,4 +39,43 @@ a { color: inherit; }
 .ok { background: var(--sage); border: 1px solid var(--sage); }
 .space > * + * { margin-top: 16px; }
 .why { background: #FFFEF7; border: 1px solid rgba(232,220,195,.6); border-radius: 14px; padding: 14px; }
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--cream); padding: 10px 18px; border-radius: 9999px; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,.2); z-index: 50; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--cream); padding: 10px 18px; border-radius: 9999px; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,.2); z-index: 50; }
+
+/* --- Protocol grouped-by-leg presentation --- */
+.leg-group + .leg-group { margin-top: 24px; }
+.leg-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 4px 0 12px;
+}
+.leg-divider::before, .leg-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--tan);
+}
+.leg-divider-label {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700;
+  opacity: .7; white-space: nowrap;
+}
+.phase-chip { border: 0; }
+
+/* --- Mobile: stack the Local / FINAL pills full width so they don't cramp --- */
+@media (max-width: 640px) {
+  .pill-row { flex-direction: column; align-items: stretch; }
+  .pill-row .pill { width: 100%; justify-content: center; }
+}
+
+/* --- Print / Save as PDF --- */
+@media print {
+  @page { margin: 14mm; }
+  body { background: #fff; }
+  .wrap { padding: 0; max-width: none; }
+  .no-print { display: none !important; }
+  .card { box-shadow: none; border-color: #ccc; break-inside: avoid; page-break-inside: avoid; }
+  .protocol-card { break-inside: avoid; page-break-inside: avoid; }
+  .leg-group { break-inside: avoid; }
+  .summary-card { background: #fff !important; color: #000 !important; border-color: #ccc !important; }
+  .summary-card .pill { background: #f4f4f4 !important; color: #000 !important; border-color: #ddd !important; }
+  /* Always show the "why this works" science when printing. */
+  details.why { border-color: #ddd; }
+  details.why > p { display: block !important; }
+  details.why[open] > summary, details.why > summary { opacity: .7; }
+  details.why:not([open]) > p { display: block !important; }
+}
