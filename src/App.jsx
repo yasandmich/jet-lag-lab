@@ -21,11 +21,17 @@ function exampleTrip() {
   ];
 }
 
+const PHASE_STYLE = {
+  NIGHT: { background: '#312e81', color: '#e0e7ff' },
+  MORNING: { background: '#fef3c7', color: '#78350f' },
+  DAYTIME: { background: '#D9EAD3', color: '#14532d' },
+  EVENING: { background: '#ffedd5', color: '#7c2d12' },
+};
+
 export default function App() {
   const [legs, setLegs] = useState([]);
   const [tick, setTick] = useState(0);
   const [toast, setToast] = useState('');
-  const [melatonin, setMelatonin] = useState(true);
   const bootstrapped = useRef(false);
 
   const flash = useCallback((msg) => { setToast(msg); setTimeout(() => setToast(''), 2600); }, []);
@@ -111,7 +117,7 @@ export default function App() {
     };
   }, [computed, layovers, legs.length]);
 
-  const protocol = useMemo(() => buildProtocol(computed, melatonin), [computed, melatonin]);
+  const protocol = useMemo(() => buildProtocol(computed), [computed]);
 
   const copyLink = () => {
     const url = `${location.origin}${location.pathname}#trip=${encodeTrip(legs)}`;
@@ -129,6 +135,10 @@ export default function App() {
     if (!protocol) return flash('Add flights first');
     download(`jetlag-${summary?.final.code || 'trip'}.ics`, buildICS(protocol, `Jet Lag Lab \u2014 ${summary?.final.city || 'Trip'}`), 'text/calendar');
     flash('Calendar file downloaded \u2713');
+  };
+  const printPlan = () => {
+    if (!protocol) return flash('Add flights first');
+    window.print();
   };
 
   const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -154,7 +164,7 @@ export default function App() {
       </div>
 
       {legs.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '48px 24px', borderStyle: 'dashed' }}>
+        <div className="card no-print" style={{ textAlign: 'center', padding: '48px 24px', borderStyle: 'dashed' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--cream)', border: '1px solid var(--tan)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontSize: 24 }}>{'\u2708\uFE0F'}</div>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginTop: 16 }}>No flights yet</h2>
           <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>Add your first flight to generate your protocol. Multi-leg worldwide supported.</p>
@@ -166,7 +176,7 @@ export default function App() {
       ) : (
         <>
           {summary && (
-            <div className="card" style={{ background: 'var(--ink)', color: 'var(--cream)', borderColor: 'var(--ink)', marginBottom: 24 }}>
+            <div className="card summary-card" style={{ background: 'var(--ink)', color: 'var(--cream)', borderColor: 'var(--ink)', marginBottom: 24 }}>
               <span className="label" style={{ opacity: .6 }}>Journey Summary {BULLET} Final dest = {summary.final.city}</span>
               <div className="row" style={{ marginTop: 6 }}>
                 <span className="pill" style={{ background: 'var(--ink2)', border: '1px solid #3a3a3a', color: 'inherit' }}>{'\u2708\uFE0F'} Total flight: <b>{fmtDur(summary.totalFlight)}</b></span>
@@ -179,39 +189,37 @@ export default function App() {
             </div>
           )}
 
-          <div className="space" style={{ marginBottom: 16 }}>
+          <div className="space no-print" style={{ marginBottom: 16 }}>
             {legs.map((leg, i) => (
               <LegCard key={leg.id} leg={leg} index={i} comp={computed[i]} layover={layovers[i]} onUpdate={updateLeg} onRemove={removeLeg} />
             ))}
           </div>
 
-          <div className="row" style={{ marginBottom: 16 }}>
+          <div className="row no-print" style={{ marginBottom: 16 }}>
             <button className="btn" onClick={addLeg}>+ Add Leg</button>
             <button className="btn btn-dark" onClick={() => setTick((t) => t + 1)}>GENERATE PROTOCOL</button>
             <button className="btn" onClick={copyLink}>{'\uD83D\uDD17'} Copy shareable link</button>
             <button className="btn" onClick={copyText}>{'\uD83D\uDCCB'} Copy plan as text</button>
             <button className="btn" onClick={exportICS}>{'\uD83D\uDCC5'} Add to calendar (.ics)</button>
+            <button className="btn" onClick={printPlan}>{'\uD83D\uDDA8\uFE0F'} Print / Save as PDF</button>
             <button className="btn" onClick={resetTrip}>Reset trip</button>
-            <label className="pill" style={{ cursor: 'pointer' }}>
-              <input type="checkbox" checked={melatonin} onChange={(e) => setMelatonin(e.target.checked)} /> Melatonin cues
-            </label>
           </div>
 
           {!chainOK && (
-            <div className="card warn" style={{ marginBottom: 16, fontSize: 13, fontWeight: 600 }}>
+            <div className="card warn no-print" style={{ marginBottom: 16, fontSize: 13, fontWeight: 600 }}>
               {'\u26A0\uFE0F'} Your legs are out of order {DASH} a later flight departs before an earlier one lands. Check your wall times.
             </div>
           )}
         </>
       )}
 
-      <ProtocolList protocol={protocol} summary={summary} />
+      <ProtocolList protocol={protocol} summary={summary} legs={legs} />
 
       <p style={{ fontSize: 10, opacity: .4, marginTop: 40, textAlign: 'center' }}>
         Jet Lag Lab by Yas &amp; Mich {BULLET} Destination-time anchored {BULLET} Informational only, not medical advice.
       </p>
 
-      {toast && <div className="toast">{toast}</div>}
+      {toast && <div className="toast no-print">{toast}</div>}
     </div>
   );
 }
@@ -297,7 +305,6 @@ function AirportPicker({ leg, side, onUpdate }) {
 function LegCard({ leg, index, comp, layover, onUpdate, onRemove }) {
   const BULLET = '\u2022';
   const ARROW = '\u2192';
-  const DASH = '\u2014';
   return (
     <div className="card">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
@@ -337,9 +344,43 @@ function LegCard({ leg, index, comp, layover, onUpdate, onRemove }) {
   );
 }
 
-function ProtocolList({ protocol, summary }) {
+function ProtocolCard({ e, summary }) {
   const BULLET = '\u2022';
   const DASH = '\u2014';
+  return (
+    <div className="card protocol-card">
+      <div className="row" style={{ gap: 8 }}>
+        <span style={{ fontSize: 14 }}>{e.advice.icon}</span>
+        <p className="label">{e.phase}</p>
+        <span className="pill" style={{ fontSize: 10, fontWeight: 700, ...e.advice.style }}>{e.advice.label}</span>
+        {e.phaseOfDay && (
+          <span className="pill phase-chip" style={{ fontSize: 10, fontWeight: 700, ...(PHASE_STYLE[e.phaseOfDay] || {}) }}>
+            {e.phaseOfDay} in {summary?.final.city}
+          </span>
+        )}
+      </div>
+      <div className="row pill-row" style={{ marginTop: 12 }}>
+        <span className="pill">{e.loc.code} {BULLET} {e.loc.city} local: {e.local.formatted} {BULLET} {e.local.tzAbbr}</span>
+        <span className="pill" style={{ background: 'var(--ink)', color: 'var(--cream)', fontWeight: 700, borderColor: 'var(--ink)' }}>
+          FINAL {BULLET} {summary?.final.city}: {e.dest.formatted} {BULLET} {e.dest.tzAbbr}
+        </span>
+      </div>
+      <p style={{ fontSize: 15, fontWeight: 600, marginTop: 12, lineHeight: 1.4 }}>{e.advice.instruction}</p>
+      <details className="why" style={{ marginTop: 12 }}>
+        <summary className="row" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', opacity: .7 }}>
+          <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--ink)', color: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>i</span>
+          Why this works {DASH} science
+        </summary>
+        <p style={{ fontSize: 13, lineHeight: 1.6, opacity: .8, marginTop: 12 }}>{e.advice.why}</p>
+      </details>
+    </div>
+  );
+}
+
+function ProtocolList({ protocol, summary, legs }) {
+  const DASH = '\u2014';
+  const ARROW = '\u2192';
+  const BULLET = '\u2022';
   if (!protocol) {
     return (
       <div className="card" style={{ fontSize: 13 }}>
@@ -347,31 +388,35 @@ function ProtocolList({ protocol, summary }) {
       </div>
     );
   }
+
+  // Group events by leg so long multi-leg trips scan more easily.
+  const groups = [];
+  protocol.forEach((e) => {
+    const li = e.legIndex ?? 0;
+    let g = groups.find((x) => x.legIndex === li);
+    if (!g) { g = { legIndex: li, items: [] }; groups.push(g); }
+    g.items.push(e);
+  });
+  groups.sort((a, b) => a.legIndex - b.legIndex);
+
   return (
-    <div className="space">
-      {protocol.map((e) => (
-        <div key={e.id} className="card">
-          <div className="row" style={{ gap: 8 }}>
-            <span style={{ fontSize: 14 }}>{e.advice.icon}</span>
-            <p className="label">{e.phase}</p>
-            <span className="pill" style={{ fontSize: 10, fontWeight: 700, ...e.advice.style }}>{e.advice.label}</span>
+    <div className="space protocol-list">
+      {groups.map((g) => {
+        const leg = legs[g.legIndex];
+        const dep = leg?.dep?.code || 'DEP';
+        const arr = leg?.arr?.code || 'ARR';
+        const fn = leg?.flightNo ? ` ${BULLET} ${leg.flightNo}` : '';
+        return (
+          <div key={g.legIndex} className="leg-group">
+            <div className="leg-divider">
+              <span className="leg-divider-label">Leg {g.legIndex + 1} {BULLET} {dep} {ARROW} {arr}{fn}</span>
+            </div>
+            <div className="space">
+              {g.items.map((e) => <ProtocolCard key={e.id} e={e} summary={summary} />)}
+            </div>
           </div>
-          <div className="row" style={{ marginTop: 12 }}>
-            <span className="pill">{e.loc.code}{BULLET}{e.loc.city} Local: {e.local.formatted} {BULLET} {e.local.tzAbbr}</span>
-            <span className="pill" style={{ background: 'var(--ink)', color: 'var(--cream)', fontWeight: 700, borderColor: 'var(--ink)' }}>
-              FINAL {BULLET} {summary?.final.city} {DASH} {e.dest.formatted} {BULLET} {e.dest.tzAbbr}
-            </span>
-          </div>
-          <p style={{ fontSize: 15, fontWeight: 600, marginTop: 12, lineHeight: 1.4 }}>{e.advice.instruction}</p>
-          <details className="why" style={{ marginTop: 12 }}>
-            <summary className="row" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', opacity: .7 }}>
-              <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--ink)', color: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>i</span>
-              Why this works {DASH} science
-            </summary>
-            <p style={{ fontSize: 13, lineHeight: 1.6, opacity: .8, marginTop: 12 }}>{e.advice.why}</p>
-          </details>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
