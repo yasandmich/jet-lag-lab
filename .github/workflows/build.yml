@@ -1,0 +1,51 @@
+name: Build single-file app
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'jet-lag-lab.html'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Copy single-file build to repo root
+        run: cp dist/index.html jet-lag-lab.html
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jet-lag-lab-html
+          path: jet-lag-lab.html
+
+      - name: Commit built file back to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain jet-lag-lab.html)" ]; then
+            git add jet-lag-lab.html
+            git commit -m "Build: update jet-lag-lab.html [skip ci]"
+            git push
+          else
+            echo "No changes to jet-lag-lab.html"
+          fi
